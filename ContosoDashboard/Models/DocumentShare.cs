@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Models;
+namespace ContosoDashboard.Models;
 
 /// <summary>
 /// Records that a document was shared with a specific user or with an entire

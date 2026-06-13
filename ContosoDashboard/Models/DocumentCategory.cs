@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Models;
+namespace ContosoDashboard.Models;
 
 /// <summary>Classification of a document in the library.</summary>
 public enum DocumentCategory

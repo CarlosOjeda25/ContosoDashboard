@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Tests.Integration;
+namespace ContosoDashboard.Tests.Integration;
 
 public class UnitTest1
 {

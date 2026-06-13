@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Services;
+namespace ContosoDashboard.Services;
 
 /// <summary>
 /// Result of a malware scan. Immutable record.

@@ -1,4 +1,4 @@
-﻿using ContosoDashboard.Data;
+using ContosoDashboard.Data;
 using ContosoDashboard.Models;
 using ContosoDashboard.Services;
 using ContosoDashboard.Services.Documents;
@@ -84,16 +84,16 @@ public sealed class UploadDocumentCommandHandlerTests
     }
 
     private static UploadDocumentCommand ValidCommand(Stream? stream = null, long fileSizeBytes = 4096) =>
-        new(FileStream:       stream ?? MakePdfStream(),
-            FileSizeBytes:    fileSizeBytes,
+        new(FileStream: stream ?? MakePdfStream(),
+            FileSizeBytes: fileSizeBytes,
             OriginalFileName: "test.pdf",
-            Title:            "Test Title",
-            Description:      null,
-            Category:         DocumentCategory.PersonalFiles,
-            ProjectId:        null,
-            TaskId:           null,
-            Tags:             [],
-            ActorUserId:      1);
+            Title: "Test Title",
+            Description: null,
+            Category: DocumentCategory.PersonalFiles,
+            ProjectId: null,
+            TaskId: null,
+            Tags: [],
+            ActorUserId: 1);
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 

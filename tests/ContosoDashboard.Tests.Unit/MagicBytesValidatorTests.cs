@@ -1,4 +1,4 @@
-﻿using ContosoDashboard.Services;
+using ContosoDashboard.Services;
 
 namespace ContosoDashboard.Tests.Unit;
 

@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Services;
+namespace ContosoDashboard.Services;
 
 /// <summary>
 /// Abstraction over the physical file storage backend.

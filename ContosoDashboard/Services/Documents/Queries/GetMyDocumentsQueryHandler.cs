@@ -1,4 +1,4 @@
-﻿using ContosoDashboard.Services.Documents;
+using ContosoDashboard.Services.Documents;
 using MediatR;
 
 namespace ContosoDashboard.Services.Documents.Queries;

@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Models;
+namespace ContosoDashboard.Models;
 
 /// <summary>
 /// Base class for all domain exceptions — constitution §III.

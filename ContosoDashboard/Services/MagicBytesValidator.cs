@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Services;
+namespace ContosoDashboard.Services;
 
 /// <summary>
 /// Validates uploaded files by inspecting their magic bytes (file signature),

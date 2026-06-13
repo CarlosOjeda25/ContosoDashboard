@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Models;
+namespace ContosoDashboard.Models;
 
 /// <summary>
 /// Represents an uploaded document.

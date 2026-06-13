@@ -1,4 +1,4 @@
-﻿using ContosoDashboard.Data;
+using ContosoDashboard.Data;
 using ContosoDashboard.Services.Documents;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

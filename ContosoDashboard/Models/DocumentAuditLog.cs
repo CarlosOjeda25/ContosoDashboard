@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Models;
+namespace ContosoDashboard.Models;
 
 /// <summary>
 /// Immutable audit trail entry for write-side document operations.

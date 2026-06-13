@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Models;
+namespace ContosoDashboard.Models;
 
 /// <summary>A searchable tag attached to a <see cref="Document"/>.</summary>
 public sealed class DocumentTag

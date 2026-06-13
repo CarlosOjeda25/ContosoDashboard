@@ -1,4 +1,4 @@
-﻿using Bunit;
+using Bunit;
 using ContosoDashboard.Models;
 using ContosoDashboard.Pages;
 using ContosoDashboard.Services.Documents;

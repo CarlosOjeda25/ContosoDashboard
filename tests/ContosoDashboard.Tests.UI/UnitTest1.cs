@@ -1,4 +1,4 @@
-﻿namespace ContosoDashboard.Tests.UI;
+namespace ContosoDashboard.Tests.UI;
 
 public class UnitTest1
 {

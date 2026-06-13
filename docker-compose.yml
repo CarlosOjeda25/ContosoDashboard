@@ -1,4 +1,5 @@
 version: '3.8'
+# Updated: 2026-06-12
 
 services:
   contoso-dashboard:

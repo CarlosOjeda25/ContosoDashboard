@@ -1,4 +1,4 @@
-﻿using ContosoDashboard.Models;
+using ContosoDashboard.Models;
 
 namespace ContosoDashboard.Services.Documents;
 

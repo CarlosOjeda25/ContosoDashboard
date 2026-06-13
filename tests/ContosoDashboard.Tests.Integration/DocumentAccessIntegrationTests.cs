@@ -1,4 +1,4 @@
-﻿using ContosoDashboard.Data;
+using ContosoDashboard.Data;
 using ContosoDashboard.Models;
 using ContosoDashboard.Services;
 using Microsoft.EntityFrameworkCore;

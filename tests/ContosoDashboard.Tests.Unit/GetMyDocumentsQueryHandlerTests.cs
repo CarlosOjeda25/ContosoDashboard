@@ -1,4 +1,4 @@
-﻿using ContosoDashboard.Models;
+using ContosoDashboard.Models;
 using ContosoDashboard.Services;
 using ContosoDashboard.Services.Documents;
 using ContosoDashboard.Services.Documents.Queries;
