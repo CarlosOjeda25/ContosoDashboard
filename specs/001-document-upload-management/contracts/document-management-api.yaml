@@ -1,0 +1,343 @@
+openapi: 3.0.3
+info:
+  title: ContosoDashboard Document Management API
+  version: 1.0.0
+  description: API contract for document upload, browse, access, sharing, and audit logging.
+servers:
+  - url: /api
+security:
+  - cookieAuth: []
+paths:
+  /documents/upload:
+    post:
+      summary: Upload a new document
+      description: Stream upload with size, magic-bytes, and antivirus validation.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, title, category]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 2000
+                category:
+                  $ref: '#/components/schemas/DocumentCategory'
+                projectId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                tags:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 100
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSummary'
+        '400':
+          description: Invalid magic-bytes, unsupported MIME, or invalid metadata
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden by RBAC
+        '413':
+          description: File exceeds 25 MB limit
+        '503':
+          description: Antivirus unavailable (fail-closed)
+
+  /documents:
+    get:
+      summary: Browse documents with pagination and filters
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: category
+          schema:
+            $ref: '#/components/schemas/DocumentCategory'
+        - in: query
+          name: projectId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: fromDateUtc
+          schema: { type: string, format: date-time }
+        - in: query
+          name: toDateUtc
+          schema: { type: string, format: date-time }
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [title, uploadDate, category, fileSize]
+        - in: query
+          name: sortDirection
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Paginated document results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedDocumentSummary'
+
+  /documents/search:
+    get:
+      summary: Search documents by metadata
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string, minLength: 1 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Search results (RBAC filtered)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedDocumentSummary'
+
+  /documents/{documentId}/download:
+    get:
+      summary: Download a document
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: File stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Forbidden by RBAC
+        '404':
+          description: Not found
+
+  /documents/{documentId}/preview:
+    get:
+      summary: Preview a document (PDF/JPEG/PNG)
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Preview stream
+        '400':
+          description: Preview not supported for document type
+        '403':
+          description: Forbidden by RBAC
+
+  /documents/{documentId}/metadata:
+    patch:
+      summary: Update document metadata
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 2000
+                category:
+                  $ref: '#/components/schemas/DocumentCategory'
+                tags:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 100
+      responses:
+        '200':
+          description: Metadata updated
+        '403':
+          description: Forbidden by RBAC
+
+  /documents/{documentId}/replace:
+    post:
+      summary: Replace the physical document file
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File replaced
+        '400':
+          description: Invalid file
+        '403':
+          description: Forbidden by RBAC
+        '413':
+          description: File exceeds 25 MB limit
+        '503':
+          description: Antivirus unavailable
+
+  /documents/{documentId}:
+    delete:
+      summary: Hard-delete a document
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Deleted from DB and storage
+        '403':
+          description: Forbidden by RBAC
+        '404':
+          description: Not found
+
+  /documents/{documentId}/share:
+    post:
+      summary: Share a document with user(s) or team(s)
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipientUserIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                recipientTeamIds:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Shared successfully (notifications best-effort)
+        '403':
+          description: Forbidden by RBAC
+
+  /documents/{documentId}/audit:
+    get:
+      summary: View write-event audit log (admin)
+      parameters:
+        - in: path
+          name: documentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Audit entries for write events only
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentAuditLogEntry'
+        '403':
+          description: Admin role required
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: .AspNetCore.Cookies
+
+  schemas:
+    DocumentCategory:
+      type: string
+      enum:
+        - ProjectDocuments
+        - TeamResources
+        - PersonalFiles
+        - Reports
+        - Presentations
+        - Other
+
+    DocumentSummary:
+      type: object
+      required: [id, title, category, fileSizeBytes, mimeType, uploadedAtUtc, uploadedByUserId]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        category:
+          $ref: '#/components/schemas/DocumentCategory'
+        fileSizeBytes: { type: integer, format: int64 }
+        mimeType: { type: string, maxLength: 255 }
+        uploadedAtUtc: { type: string, format: date-time }
+        uploadedByUserId: { type: string, format: uuid }
+        projectId: { type: string, format: uuid, nullable: true }
+
+    PagedDocumentSummary:
+      type: object
+      required: [items, page, pageSize, totalCount]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentSummary'
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalCount: { type: integer }
+
+    DocumentAuditLogEntry:
+      type: object
+      required: [id, documentId, eventType, actorUserId, occurredAtUtc]
+      properties:
+        id: { type: string, format: uuid }
+        documentId: { type: string, format: uuid }
+        eventType:
+          type: string
+          enum: [Uploaded, Deleted, Replaced, ShareGranted]
+        actorUserId: { type: string, format: uuid }
+        occurredAtUtc: { type: string, format: date-time }

@@ -1,0 +1,56 @@
+name: CI
+
+# T-067 — constitution §V CI gate
+# Triggers: PRs to main + pushes on the feature branch
+on:
+  push:
+    branches:
+      - main
+      - "001-document-upload-management"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test-format:
+    name: Build · Test · Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Step 1: Build (constitution §V — blocking) ───────────────────────
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.x"
+
+      - name: Restore dependencies
+        run: dotnet restore ContosoDashboard.slnx
+
+      - name: Build
+        run: dotnet build ContosoDashboard.slnx --no-restore --configuration Release
+
+      # ── Step 2: Test with coverage gate ≥ 80% (constitution §V — blocking) ─
+      - name: Test with coverage
+        run: |
+          dotnet test ContosoDashboard.slnx \
+            --no-build \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Threshold=80 \
+               DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ThresholdType=Line \
+               DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ThresholdStat=Total
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+      # ── Step 3: Format check (constitution §V — blocking) ────────────────
+      - name: Format check
+        run: dotnet format ContosoDashboard.slnx --verify-no-changes

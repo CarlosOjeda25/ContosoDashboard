@@ -1,0 +1,54 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Test results
+**/TestResults/
+**/coverage/
+
+# Database (local file)
+*.db
+*.db-shm
+*.db-wal
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Git
+.git/
+.gitignore
+
+# NuGet
+packages/
+*.nupkg
+
+# User secrets
+**/secrets.json
+**/appsettings.Development.json
+**/appsettings.*.json
+
+# Uploads (runtime only - volume will handle)
+AppData/uploads/
+
+# Specs/Docs (not needed in container)
+specs/
+StakeholderDocs/
+README.md
+LICENSE-CODE

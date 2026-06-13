@@ -1,0 +1,299 @@
+@page "/tasks"
+@using ContosoDashboard.Services
+@using ContosoDashboard.Models
+@using ContosoDashboard.Services.Documents
+@using ContosoDashboard.Services.Documents.Queries
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize]
+@inject ITaskService TaskService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IMediator Mediator
+
+<PageTitle>My Tasks - ContosoDashboard</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>My Tasks</h1>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateTaskModal">
+                <i class="bi bi-plus-circle"></i> New Task
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <label>Status</label>
+            <select class="form-select" @bind="filterStatus">
+                <option value="">All</option>
+                <option value="@Models.TaskStatus.NotStarted">Not Started</option>
+                <option value="@Models.TaskStatus.InProgress">In Progress</option>
+                <option value="@Models.TaskStatus.Completed">Completed</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label>Priority</label>
+            <select class="form-select" @bind="filterPriority">
+                <option value="">All</option>
+                <option value="@TaskPriority.Low">Low</option>
+                <option value="@TaskPriority.Medium">Medium</option>
+                <option value="@TaskPriority.High">High</option>
+                <option value="@TaskPriority.Critical">Critical</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label>&nbsp;</label>
+            <button class="btn btn-secondary d-block w-100" @onclick="ApplyFilters">
+                Apply Filters
+            </button>
+        </div>
+    </div>
+
+    <!-- Tasks List -->
+    @if (tasks == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (!tasks.Any())
+    {
+        <div class="alert alert-info">No tasks found.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                        <th>Project</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var task in tasks)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@task.Title</strong>
+                                @if (!string.IsNullOrEmpty(task.Description))
+                                {
+                                    <br />
+                                    <small class="text-muted">@task.Description</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge bg-@GetPriorityColor(task.Priority)">
+                                    @task.Priority
+                                </span>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm" 
+                                        value="@task.Status" 
+                                        @onchange="@(e => UpdateTaskStatus(task.TaskId, Enum.Parse<Models.TaskStatus>(e.Value?.ToString() ?? "NotStarted")))">
+                                    <option value="@Models.TaskStatus.NotStarted">Not Started</option>
+                                    <option value="@Models.TaskStatus.InProgress">In Progress</option>
+                                    <option value="@Models.TaskStatus.Completed">Completed</option>
+                                </select>
+                            </td>
+                            <td>
+                                @if (task.DueDate.HasValue)
+                                {
+                                    var isOverdue = task.DueDate.Value < DateTime.UtcNow && task.Status != Models.TaskStatus.Completed;
+                                    <span class="@(isOverdue ? "text-danger fw-bold" : "")">
+                                        @task.DueDate.Value.ToString("MMM dd, yyyy")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No due date</span>
+                                }
+                            </td>
+                            <td>
+                                @if (task.Project != null)
+                                {
+                                    <a href="/projects/@task.ProjectId">@task.Project.Name</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1"
+                                        @onclick="() => ViewTaskDetails(task.TaskId)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        title="View / attach documents"
+                                        @onclick="() => ToggleDocuments(task.TaskId, task.ProjectId)">
+                                    <i class="bi bi-paperclip"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        @if (expandedTaskId == task.TaskId)
+                        {
+                            <tr>
+                                <td colspan="6" class="bg-light">
+                                    <div class="p-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <strong><i class="bi bi-paperclip me-1"></i>Attached Documents</strong>
+                                            <a href="@GetUploadUrl(task.TaskId, task.ProjectId)"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-upload me-1"></i> Attach
+                                            </a>
+                                        </div>
+                                        @if (taskDocs == null)
+                                        {
+                                            <em>Loading…</em>
+                                        }
+                                        else if (!taskDocs.Items.Any())
+                                        {
+                                            <small class="text-muted">No documents attached to this task.</small>
+                                        }
+                                        else
+                                        {
+                                            <ul class="list-unstyled mb-0">
+                                                @foreach (var doc in taskDocs.Items)
+                                                {
+                                                    <li class="d-flex justify-content-between align-items-center py-1">
+                                                        <span>
+                                                            <i class="bi bi-file-earmark me-1"></i>@doc.Title
+                                                            <small class="text-muted ms-1">(@FormatSize(doc.FileSizeBytes))</small>
+                                                        </span>
+                                                        <a href="/api/documents/@doc.Id/download"
+                                                           class="btn btn-sm btn-outline-secondary"
+                                                           title="Download">
+                                                            <i class="bi bi-download"></i>
+                                                        </a>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<TaskItem>? tasks;
+    private string filterStatus = "";
+    private string filterPriority = "";
+    private int currentUserId = 0;
+
+    // Document attachment panel (T-047)
+    private int? expandedTaskId;
+    private PagedResult<DocumentSummary>? taskDocs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user ID from authentication claims
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+        {
+            currentUserId = userId;
+        }
+
+        if (currentUserId > 0)
+        {
+            await LoadTasks();
+        }
+    }
+
+    private async Task LoadTasks()
+    {
+        tasks = await TaskService.GetUserTasksAsync(currentUserId);
+    }
+
+    private async Task ApplyFilters()
+    {
+        Models.TaskStatus? status = string.IsNullOrEmpty(filterStatus) ? null : Enum.Parse<Models.TaskStatus>(filterStatus);
+        TaskPriority? priority = string.IsNullOrEmpty(filterPriority) ? null : Enum.Parse<TaskPriority>(filterPriority);
+
+        tasks = await TaskService.GetFilteredTasksAsync(currentUserId, status, priority, null);
+    }
+
+    private async Task UpdateTaskStatus(int taskId, Models.TaskStatus newStatus)
+    {
+        if (currentUserId > 0)
+        {
+            await TaskService.UpdateTaskStatusAsync(taskId, currentUserId, newStatus);
+            await LoadTasks();
+        }
+    }
+
+    private void ShowCreateTaskModal()
+    {
+        // TODO: Implement modal dialog for creating tasks
+    }
+
+    private void ViewTaskDetails(int taskId)
+    {
+        // TODO: Navigate to task details or show modal
+    }
+
+    private async Task ToggleDocuments(int taskId, int? projectId)
+    {
+        if (expandedTaskId == taskId)
+        {
+            expandedTaskId = null;
+            taskDocs       = null;
+            return;
+        }
+        expandedTaskId = taskId;
+        taskDocs       = null;
+        try
+        {
+            // Filter documents scoped to the task's project (projectId resolved automatically)
+            var filter = new DocumentFilter(
+                UserId: null, ProjectId: projectId, Category: null,
+                FromUtc: null, ToUtc: null,
+                SortBy: "uploadDate", SortDescending: true, Page: 1, PageSize: 20);
+            // Use GetMyDocumentsQuery scoped to the actor — handlers enforce RBAC
+            taskDocs = await Mediator.Send(new GetMyDocumentsQuery(currentUserId, filter));
+        }
+        catch
+        {
+            taskDocs = new PagedResult<DocumentSummary>(Array.Empty<DocumentSummary>(), 0, 1, 20);
+        }
+    }
+
+    private static string FormatSize(long bytes) =>
+        bytes switch
+        {
+            < 1_024     => $"{bytes} B",
+            < 1_048_576 => $"{bytes / 1_024.0:F1} KB",
+            _           => $"{bytes / 1_048_576.0:F1} MB"
+        };
+
+    private static string GetUploadUrl(int taskId, int? projectId) =>
+        projectId.HasValue
+            ? $"/documents/upload?TaskId={taskId}&ProjectId={projectId}"
+            : $"/documents/upload?TaskId={taskId}";
+
+    private string GetPriorityColor(TaskPriority priority)
+    {
+        return priority switch
+        {
+            TaskPriority.Critical => "danger",
+            TaskPriority.High => "warning",
+            TaskPriority.Medium => "info",
+            TaskPriority.Low => "secondary",
+            _ => "secondary"
+        };
+    }
+}

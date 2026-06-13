@@ -1,0 +1,9 @@
+{
+  "integration": "speckit",
+  "version": "0.8.6",
+  "installed_at": "2026-06-11T12:05:03.875015+00:00",
+  "files": {
+    ".specify/scripts/powershell/setup-tasks.ps1": "aa7b19077dc4f6feee1dae47f68dc3e6d8ac75adf572a949443f3322b753cfa2",
+    ".specify/templates/constitution-template.md": "ce7549540fa45543cca797a150201d868e64495fdff39dc38246fb17bd4024b3"
+  }
+}

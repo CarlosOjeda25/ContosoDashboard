@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  contoso-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: contoso-dashboard
+    ports:
+      - "5000:8080"          # Host:Container — ajusta 5000 si ya está en uso
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      # SQLite connection string — file lives under mounted /app/data/ volume
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/ContosoDashboard.db
+      # Storage path for uploads (outside web root)
+      - Storage__BasePath=/app/AppData/uploads
+    volumes:
+      # Persist SQLite database across container restarts (mount directory, not file)
+      - contoso-db:/app/data
+      # Persist uploaded documents
+      - contoso-uploads:/app/AppData/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  contoso-db:
+    driver: local
+  contoso-uploads:
+    driver: local
+
+# Networks (optional, for future multi-service deployments)
+# networks:
+#   default:
+#     name: contoso-network

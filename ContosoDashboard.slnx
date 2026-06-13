@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/ContosoDashboard.Tests.Integration/ContosoDashboard.Tests.Integration.csproj" />
+    <Project Path="tests/ContosoDashboard.Tests.UI/ContosoDashboard.Tests.UI.csproj" />
+    <Project Path="tests/ContosoDashboard.Tests.Unit/ContosoDashboard.Tests.Unit.csproj" />
+  </Folder>
+  <Project Path="ContosoDashboard/ContosoDashboard.csproj" />
+</Solution>

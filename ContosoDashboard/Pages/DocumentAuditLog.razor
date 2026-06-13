@@ -1,0 +1,145 @@
+@page "/documents/audit/{documentId:guid}"
+@using ContosoDashboard.Models
+@using ContosoDashboard.Services.Documents.Queries
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using AuditLogEntry = ContosoDashboard.Models.DocumentAuditLog
+@attribute [Authorize]
+@inject IMediator Mediator
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Document Audit Log - ContosoDashboard</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-shield-check"></i> Document Audit Log</h1>
+            <small class="text-muted">Document: <code>@DocumentId</code></small>
+        </div>
+        <div class="col-auto">
+            <a href="/documents/my" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    @if (accessDenied)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-lock me-1"></i> Access denied. This page is restricted to Administrators.
+        </div>
+    }
+    else if (isLoading)
+    {
+        <p><em>Loading…</em></p>
+    }
+    else if (result == null || !result.Items.Any())
+    {
+        <div class="alert alert-info">No audit events found for this document.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Event</th>
+                        <th>Actor</th>
+                        <th>Date (UTC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in result.Items)
+                    {
+                        <tr>
+                            <td>
+                                <span class="badge @GetEventBadge(entry.EventType)">
+                                    @entry.EventType
+                                </span>
+                            </td>
+                            <td><small>@entry.ActorUserId</small></td>
+                            <td><small>@entry.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</small></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                Page @currentPage of @TotalPages (@result.TotalCount total events)
+            </small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => GoToPage(currentPage - 1)">‹</button>
+                    </li>
+                    @for (int p = 1; p <= TotalPages; p++)
+                    {
+                        var pg = p;
+                        <li class="page-item @(pg == currentPage ? "active" : "")">
+                            <button class="page-link" @onclick="() => GoToPage(pg)">@pg</button>
+                        </li>
+                    }
+                    <li class="page-item @(currentPage >= TotalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => GoToPage(currentPage + 1)">›</button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid DocumentId { get; set; }
+
+    private PagedResult<AuditLogEntry>? result;
+    private bool isLoading   = true;
+    private bool accessDenied = false;
+    private int  currentPage = 1;
+    private int  pageSize    = 20;
+    private int  currentUserId = 0;
+
+    private int TotalPages => result is null ? 1 : (int)Math.Ceiling(result.TotalCount / (double)pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var claim     = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (claim != null) int.TryParse(claim.Value, out currentUserId);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        try
+        {
+            result = await Mediator.Send(
+                new GetDocumentAuditLogQuery(DocumentId, currentUserId, currentPage, pageSize));
+        }
+        catch (ForbiddenException)
+        {
+            accessDenied = true;
+        }
+        finally { isLoading = false; }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1 || page > TotalPages) return;
+        currentPage = page;
+        await LoadAsync();
+    }
+
+    private static string GetEventBadge(DocumentAuditEventType type) => type switch
+    {
+        DocumentAuditEventType.Uploaded     => "bg-success",
+        DocumentAuditEventType.Deleted      => "bg-danger",
+        DocumentAuditEventType.Replaced     => "bg-warning text-dark",
+        DocumentAuditEventType.ShareGranted => "bg-info text-dark",
+        _                                   => "bg-secondary"
+    };
+}
